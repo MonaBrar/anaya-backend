@@ -1,5 +1,5 @@
 import openai
-import pinecone
+import pinecone # updated import
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
