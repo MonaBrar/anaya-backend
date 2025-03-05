@@ -10,12 +10,12 @@ PINECONE_ENVIRONMENT = "your_pinecone_environment"
 PINECONE_INDEX_NAME = "anaya-memory"
 
 openai.api_key = OPENAI_API_KEY
-pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
+pc = pinecone.Pinecone(api_key=PINECONE_API_KEY)  # Create Pinecone instance
 
 # Initialize Pinecone Index
 if PINECONE_INDEX_NAME not in pinecone.list_indexes():
     pinecone.create_index(PINECONE_INDEX_NAME, dimension=1536, metric='cosine')
-index = pinecone.Index(PINECONE_INDEX_NAME)
+index = pc.Index(PINECONE_INDEX_NAME)
 
 # FastAPI App
 app = FastAPI()
