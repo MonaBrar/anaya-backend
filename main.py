@@ -13,8 +13,8 @@ openai.api_key = OPENAI_API_KEY
 pc = pinecone.Pinecone(api_key=PINECONE_API_KEY)  # Create Pinecone instance
 
 # Initialize Pinecone Index
-if PINECONE_INDEX_NAME not in pinecone.list_indexes():
-    pinecone.create_index(PINECONE_INDEX_NAME, dimension=1536, metric='cosine')
+if PINECONE_INDEX_NAME not in pc.list_indexes().names():
+    pc.create_index(PINECONE_INDEX_NAME, dimension=1024, metric='cosine')
 index = pc.Index(PINECONE_INDEX_NAME)
 
 # FastAPI App
@@ -52,6 +52,7 @@ def retrieve_lesson(query: str):
 @app.get("/all_lessons/")
 def all_lessons():
     lessons = []
-    for vector in index.fetch(ids=index.list_ids())['vectors'].values():
-        lessons.append({"title": vector['id'], "content": vector['metadata']['content']})
+    for vector_id in index.list_ids():
+        vector = index.fetch(ids=[vector_id])['vectors'][vector_id]
+        lessons.append({"title": vector_id, "content": vector['metadata']['content']})
     return {"lessons": lessons}
