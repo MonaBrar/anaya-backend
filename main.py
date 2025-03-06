@@ -10,7 +10,9 @@ PINECONE_ENVIRONMENT = "your_pinecone_environment"
 PINECONE_INDEX_NAME = "anaya-memory"
 
 openai.api_key = OPENAI_API_KEY
-pc = pinecone.Pinecone(api_key=PINECONE_API_KEY)  # Create Pinecone instance
+from pinecone import Pinecone  # ✅ Correct way
+
+pc = Pinecone(api_key=PINECONE_API_KEY)  # ✅ Correct initialization
 
 # Initialize Pinecone Index
 if PINECONE_INDEX_NAME not in pc.list_indexes().names():
