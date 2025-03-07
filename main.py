@@ -22,14 +22,18 @@ from pinecone import Pinecone, ServerlessSpec  # ✅ Import the new SDK
 # ✅ Initialize Pinecone Client
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
-# ✅ Ensure Index Exists & Connect
-if PINECONE_INDEX_NAME not in pc.list_indexes():
+# ✅ Check if index exists before creating
+existing_indexes = pc.list_indexes()
+if PINECONE_INDEX_NAME not in existing_indexes:
+    print(f"Creating Pinecone index: {PINECONE_INDEX_NAME}...")
     pc.create_index(
         name=PINECONE_INDEX_NAME,
         dimension=PINECONE_DIMENSION,
         metric="cosine",
-        spec=ServerlessSpec(cloud="aws", region="us-west-2")  # ✅ Required parameter
+        spec=ServerlessSpec(cloud="aws", region="us-west-2")
     )
+else:
+    print(f"Pinecone index '{PINECONE_INDEX_NAME}' already exists. Skipping creation.")
 
 # ✅ Connect to Pinecone Index
 index = pc.Index(PINECONE_INDEX_NAME)
