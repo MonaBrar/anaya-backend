@@ -22,12 +22,14 @@ openai.api_key = OPENAI_API_KEY
 pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
 
 # ✅ Ensure Index Exists & Connect
-if PINECONE_INDEX_NAME not in pinecone.list_indexes():
-    pinecone.create_index(
-        name=PINECONE_INDEX_NAME,
-        dimension=PINECONE_DIMENSION,
-        metric="cosine"
-    )
+from pinecone import ServerlessSpec  # ✅ Import ServerlessSpec
+
+pc.create_index(
+    name=PINECONE_INDEX_NAME,
+    dimension=3072,
+    metric="cosine",
+    spec=ServerlessSpec(cloud="aws", region=PINECONE_ENVIRONMENT)  # ✅ Add the missing 'spec' argument
+)
 
 # ✅ Connect to Pinecone Index
 index = pinecone.Index(PINECONE_INDEX_NAME)
