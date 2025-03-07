@@ -62,11 +62,17 @@ class Lesson(BaseModel):
 # ✅ Store a Lesson in Pinecone
 @app.post("/store_lesson/")
 async def store_lesson(lesson: Lesson):
-    client = openai.OpenAI()  # ✅ Indented inside the function
+    client = openai.OpenAI()
     embedding = client.embeddings.create(
         input=lesson.content,
         model="text-embedding-ada-002"
     ).data[0].embedding
+
+    # Duplicate the embedding to match 3072 dimensions
+    extended_embedding = embedding + embedding
+
+    # Store in Pinecone
+    index.upsert([(lesson.title, extended_embedding, {"content": lesson.content})])
 
     index.upsert([(lesson.title, embedding, {"content": lesson.content})])
 
