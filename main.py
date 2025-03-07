@@ -1,26 +1,34 @@
 import os
-
-print("Loaded Pinecone API Key:", os.getenv("PINECONE_API_KEY"))
-
 import openai
-import pinecone # updated import
+from pinecone import Pinecone  # ✅ Latest Pinecone SDK
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# Load API Keys (Replace with your actual keys)
-OPENAI_API_KEY = "your_openai_api_key"
-PINECONE_API_KEY = "your_pinecone_api_key"
-PINECONE_ENVIRONMENT = "your_pinecone_environment"
-PINECONE_INDEX_NAME = "anaya-memory"
+# Load API Keys from Environment Variables
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 
+# Pinecone Index Configuration
+PINECONE_INDEX_NAME = "anaya-777"  # ✅ Matches your Pinecone index
+PINECONE_ENVIRONMENT = "us-west-2"  # ✅ Matches your Pinecone region
+PINECONE_DIMENSION = 3072  # ✅ Matches your Pinecone index settings
+
+# Initialize OpenAI
 openai.api_key = OPENAI_API_KEY
-from pinecone import Pinecone  # ✅ Correct way
 
-pc = Pinecone(api_key=PINECONE_API_KEY)  # ✅ Correct initialization
+# Initialize Pinecone Client
+pc = Pinecone(api_key=PINECONE_API_KEY)
 
-# Initialize Pinecone Index
+# Check if Index Exists
 if PINECONE_INDEX_NAME not in pc.list_indexes().names():
-    pc.create_index(PINECONE_INDEX_NAME, dimension=3072, metric='cosine')
+    pc.create_index(
+        name=PINECONE_INDEX_NAME,
+        dimension=PINECONE_DIMENSION,
+        metric="cosine",
+        spec={"cloud": "aws", "region": PINECONE_ENVIRONMENT}  # ✅ Updated
+    )
+
+# Connect to Pinecone Index
 index = pc.Index(PINECONE_INDEX_NAME)
 
 # FastAPI App
@@ -35,7 +43,7 @@ class Lesson(BaseModel):
 @app.post("/store_lesson/")
 def store_lesson(lesson: Lesson):
     embedding = openai.Embedding.create(
-        input=lesson.content, model="text-embedding-ada-002"
+        input=lesson.content, model="text-embedding-3-large"  # ✅ Matches your Pinecone settings
     )['data'][0]['embedding']
     
     index.upsert([(lesson.title, embedding, {"content": lesson.content})])
@@ -45,7 +53,7 @@ def store_lesson(lesson: Lesson):
 @app.get("/retrieve_lesson/")
 def retrieve_lesson(query: str):
     query_embedding = openai.Embedding.create(
-        input=query, model="text-embedding-ada-002"
+        input=query, model="text-embedding-3-large"  # ✅ Consistent embedding model
     )['data'][0]['embedding']
     
     results = index.query(query_embedding, top_k=3, include_metadata=True)
@@ -58,7 +66,7 @@ def retrieve_lesson(query: str):
 @app.get("/all_lessons/")
 def all_lessons():
     lessons = []
-    for vector_id in index.list_ids():
-        vector = index.fetch(ids=[vector_id])['vectors'][vector_id]
-        lessons.append({"title": vector_id, "content": vector['metadata']['content']})
+    for vector in index.query(queries=[[0] * PINECONE_DIMENSION], top_k=100, include_metadata=True)['matches']:
+        lessons.append({"title": vector["id"], "content": vector["metadata"]["content"]})
     return {"lessons": lessons}
+
