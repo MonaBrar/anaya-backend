@@ -1,12 +1,27 @@
 import os
-import openai
-from pinecone import Pinecone, ServerlessSpec  # ✅ Ensure correct Pinecone import
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+
+# ✅ Initialize FastAPI app
+app = FastAPI()
 
 # Load API Keys from Environment Variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+
+# ✅ Root Route to check if API is live
+@app.get("/")
+def read_root():
+    return {"message": "FastAPI is live on Render!"}
+
+# ✅ Define your other API endpoints below
+class Lesson(BaseModel):
+    title: str
+    content: str
+
+@app.post("/store_lesson/")
+def store_lesson(lesson: Lesson):
+    return {"message": f"Lesson '{lesson.title}' stored successfully."}
 
 # Pinecone Index Configuration
 PINECONE_INDEX_NAME = "anaya-777"  # ✅ Matches your Pinecone index
