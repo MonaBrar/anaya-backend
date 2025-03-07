@@ -1,3 +1,7 @@
+import os
+
+print("Loaded Pinecone API Key:", os.getenv("PINECONE_API_KEY"))
+
 import openai
 import pinecone # updated import
 from fastapi import FastAPI, HTTPException
