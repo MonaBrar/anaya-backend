@@ -1,5 +1,6 @@
 import os
-import openai  # ✅ Ensure OpenAI is imported
+import openai
+from pinecone import Pinecone, ServerlessSpec  # ✅ Ensure correct Pinecone import
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
