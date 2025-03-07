@@ -62,13 +62,14 @@ class Lesson(BaseModel):
 # ✅ Store a Lesson in Pinecone
 @app.post("/store_lesson/")
 def store_lesson(lesson: Lesson):
- embedding = openai.embeddings.create(
-    model="text-embedding-ada-002",
-    input=lesson_content
+embedding = openai.Embedding.create(
+    input=lesson.content,
+    model="text-embedding-ada-002"
 )['data'][0]['embedding']
-    
-    index.upsert([(lesson.title, embedding, {"content": lesson.content})])
-    return {"message": f"Lesson '{lesson.title}' stored successfully."}
+
+index.upsert([(lesson.title, embedding, {"content": lesson.content})])
+
+return {"message": f"Lesson '{lesson.title}' stored successfully."}
 
 # ✅ Retrieve a Lesson from Pinecone
 @app.get("/retrieve_lesson/")
