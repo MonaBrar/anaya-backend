@@ -2,10 +2,15 @@ import os
 import openai
 from pinecone import Pinecone, ServerlessSpec  # ✅ Ensure correct Pinecone import
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel  # ✅ Keep this import!
 
 # ✅ Initialize FastAPI app
 app = FastAPI()
+
+# ✅ Root Route to check if API is live
+@app.get("/")
+def read_root():
+    return {"message": "FastAPI is live on Render!"}
 
 # Load API Keys from Environment Variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
