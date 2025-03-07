@@ -16,7 +16,7 @@ pc = Pinecone(api_key=PINECONE_API_KEY)  # ✅ Correct initialization
 
 # Initialize Pinecone Index
 if PINECONE_INDEX_NAME not in pc.list_indexes().names():
-    pc.create_index(PINECONE_INDEX_NAME, dimension=1024, metric='cosine')
+    pc.create_index(PINECONE_INDEX_NAME, dimension=3072, metric='cosine')
 index = pc.Index(PINECONE_INDEX_NAME)
 
 # FastAPI App
