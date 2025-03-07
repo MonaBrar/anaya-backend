@@ -1,6 +1,6 @@
 import os
 import openai
-from pinecone import Pinecone  # ✅ Latest Pinecone SDK
+from pinecone import Pinecone, ServerlessSpec  # ✅ Ensure correct Pinecone import
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -16,30 +16,33 @@ PINECONE_DIMENSION = 3072  # ✅ Matches your Pinecone index settings
 # Initialize OpenAI
 openai.api_key = OPENAI_API_KEY
 
-# Initialize Pinecone Client
+# ✅ Initialize Pinecone Client (Fix)
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
-# Check if Index Exists
+# ✅ Ensure Index Exists & Connect
 if PINECONE_INDEX_NAME not in pc.list_indexes().names():
     pc.create_index(
         name=PINECONE_INDEX_NAME,
         dimension=PINECONE_DIMENSION,
         metric="cosine",
-        spec={"cloud": "aws", "region": PINECONE_ENVIRONMENT}  # ✅ Updated
+        spec=ServerlessSpec(  # ✅ Correct Pinecone Spec Usage
+            cloud="aws", 
+            region=PINECONE_ENVIRONMENT
+        )
     )
 
 # Connect to Pinecone Index
 index = pc.Index(PINECONE_INDEX_NAME)
 
-# FastAPI App
+# ✅ FastAPI App
 app = FastAPI()
 
-# Data Model for Lessons
+# ✅ Data Model for Lessons
 class Lesson(BaseModel):
     title: str
     content: str
 
-# Store a Lesson in Pinecone
+# ✅ Store a Lesson in Pinecone
 @app.post("/store_lesson/")
 def store_lesson(lesson: Lesson):
     embedding = openai.Embedding.create(
@@ -49,7 +52,7 @@ def store_lesson(lesson: Lesson):
     index.upsert([(lesson.title, embedding, {"content": lesson.content})])
     return {"message": f"Lesson '{lesson.title}' stored successfully."}
 
-# Retrieve a Lesson from Pinecone
+# ✅ Retrieve a Lesson from Pinecone
 @app.get("/retrieve_lesson/")
 def retrieve_lesson(query: str):
     query_embedding = openai.Embedding.create(
@@ -62,7 +65,7 @@ def retrieve_lesson(query: str):
     
     return {"lessons": [{"title": match['id'], "content": match['metadata']['content']} for match in results['matches']]}
 
-# Retrieve All Lessons (For Lesson Tracking)
+# ✅ Retrieve All Lessons (For Lesson Tracking)
 @app.get("/all_lessons/")
 def all_lessons():
     lessons = []
@@ -70,3 +73,4 @@ def all_lessons():
         lessons.append({"title": vector["id"], "content": vector["metadata"]["content"]})
     return {"lessons": lessons}
 
+# ✅ ✅ ✅ FastAPI app now correctly initialized ✅ ✅ ✅
