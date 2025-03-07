@@ -1,4 +1,5 @@
 import os
+import openai  # ✅ Ensure OpenAI is imported
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
