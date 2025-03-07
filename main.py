@@ -1,7 +1,9 @@
 import os
 import openai
 import pinecone  # ✅ Use the new Pinecone SDK
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
+
+app = FastAPI()
 from pydantic import BaseModel
 
 # Load API Keys from Environment Variables
