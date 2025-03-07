@@ -1,6 +1,6 @@
 import os
 import openai
-from pinecone import Pinecone, ServerlessSpec  # ✅ Ensure correct Pinecone import
+import pinecone  # ✅ Use the new Pinecone SDK
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -16,23 +16,20 @@ PINECONE_DIMENSION = 3072  # ✅ Matches your Pinecone index settings
 # Initialize OpenAI
 openai.api_key = OPENAI_API_KEY
 
-# ✅ Initialize Pinecone Client (Fix)
-pc = Pinecone(api_key=PINECONE_API_KEY)
+# ✅ Initialize Pinecone (New SDK)
+pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENVIRONMENT)
 
 # ✅ Ensure Index Exists & Connect
-if PINECONE_INDEX_NAME not in pc.list_indexes().names():
-    pc.create_index(
+if PINECONE_INDEX_NAME not in pinecone.list_indexes():
+    pinecone.create_index(
         name=PINECONE_INDEX_NAME,
         dimension=PINECONE_DIMENSION,
-        metric="cosine",
-        spec=ServerlessSpec(  # ✅ Correct Pinecone Spec Usage
-            cloud="aws", 
-            region=PINECONE_ENVIRONMENT
-        )
+        metric="cosine"
     )
 
-# Connect to Pinecone Index
-index = pc.Index(PINECONE_INDEX_NAME)
+# ✅ Connect to Pinecone Index
+index = pinecone.Index(PINECONE_INDEX_NAME)
+
 
 # ✅ FastAPI App
 app = FastAPI()
