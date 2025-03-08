@@ -29,7 +29,9 @@ openai.api_key = OPENAI_API_KEY
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
 # ✅ Ensure Index Exists & Connect
-if PINECONE_INDEX_NAME not in pc.list_indexes().names():
+existing_indexes = [index.name for index in pc.list_indexes()]
+
+if PINECONE_INDEX_NAME not in existing_indexes:
     pc.create_index(
         name=PINECONE_INDEX_NAME,
         dimension=3072,  # ✅ Matches your Pinecone index settings
@@ -47,11 +49,10 @@ class Lesson(BaseModel):
 # ✅ Store a Lesson in Pinecone
 @app.post("/store_lesson/")
 async def store_lesson(lesson: Lesson):
-    client = openai.OpenAI()
-    embedding = client.embeddings.create(
+    embedding = openai.Embedding.create(
         input=lesson.content,
         model="text-embedding-ada-002"
-    ).data[0].embedding
+    )['data'][0]['embedding']
 
     # ✅ Ensure embedding matches 3072 dimensions
     extended_embedding = embedding + embedding
@@ -65,10 +66,11 @@ async def store_lesson(lesson: Lesson):
 @app.get("/retrieve_lesson/")
 def retrieve_lesson(query: str):
     query_embedding = openai.Embedding.create(
-        input=query, model="text-embedding-3-large"
+        input=query, model="text-embedding-ada-002"
     )['data'][0]['embedding']
     
-    results = index.query(query_embedding, top_k=3, include_metadata=True)
+    results = index.query(queries=[query_embedding], top_k=3, include_metadata=True)
+
     if not results['matches']:
         raise HTTPException(status_code=404, detail="No relevant lessons found.")
     
@@ -78,9 +80,11 @@ def retrieve_lesson(query: str):
 @app.get("/all_lessons/")
 def all_lessons():
     lessons = []
-    for vector in index.query(queries=[[0] * 3072], top_k=100, include_metadata=True)['matches']:
+    vectors = index.query(queries=[[0] * 3072], top_k=100, include_metadata=True)['matches']
+    
+    for vector in vectors:
         lessons.append({"title": vector["id"], "content": vector["metadata"]["content"]})
+
     return {"lessons": lessons}
 
 # ✅ ✅ ✅ FastAPI app now correctly initialized ✅ ✅ ✅
-
