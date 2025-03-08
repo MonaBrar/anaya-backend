@@ -1,6 +1,6 @@
 import os
 import openai
-from pinecone import Pinecone, ServerlessSpec  # ✅ Ensure correct Pinecone import
+from pinecone import Pinecone, ServerlessSpec  # ✅ Correct Pinecone import
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel  # ✅ Keep this import!
 
@@ -12,52 +12,32 @@ app = FastAPI()
 def read_root():
     return {"message": "FastAPI is live on Render!"}
 
-# Load API Keys from Environment Variables
+# ✅ Load API Keys from Environment Variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
+PINECONE_INDEX_NAME = "anaya-memory"
 
-# ✅ Root Route to check if API is live
-@app.get("/")
-def read_root():
-    return {"message": "FastAPI is live on Render!"}
+# ✅ Ensure API keys are set
+if not OPENAI_API_KEY or not PINECONE_API_KEY:
+    raise ValueError("Missing API keys! Please set environment variables.")
 
-# ✅ Define your other API endpoints below
-class Lesson(BaseModel):
-    title: str
-    content: str
-
-@app.post("/store_lesson/")
-def store_lesson(lesson: Lesson):
-    return {"message": f"Lesson '{lesson.title}' stored successfully."}
-
-# Pinecone Index Configuration
-PINECONE_INDEX_NAME = "anaya-777"  # ✅ Matches your Pinecone index
-PINECONE_ENVIRONMENT = "us-west-2"  # ✅ Matches your Pinecone region
-PINECONE_DIMENSION = 3072  # ✅ Matches your Pinecone index settings
-
-# Initialize OpenAI
+# ✅ Initialize OpenAI
 openai.api_key = OPENAI_API_KEY
 
-# ✅ Initialize Pinecone Client (Fix)
+# ✅ Initialize Pinecone Properly
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
 # ✅ Ensure Index Exists & Connect
 if PINECONE_INDEX_NAME not in pc.list_indexes().names():
     pc.create_index(
         name=PINECONE_INDEX_NAME,
-        dimension=PINECONE_DIMENSION,
+        dimension=3072,  # ✅ Matches your Pinecone index settings
         metric="cosine",
-        spec=ServerlessSpec(  # ✅ Correct Pinecone Spec Usage
-            cloud="aws", 
-            region=PINECONE_ENVIRONMENT
-        )
+        spec=ServerlessSpec(cloud="aws", region=PINECONE_ENVIRONMENT)
     )
 
-# Connect to Pinecone Index
 index = pc.Index(PINECONE_INDEX_NAME)
-
-# ✅ FastAPI App
-app = FastAPI()
 
 # ✅ Data Model for Lessons
 class Lesson(BaseModel):
@@ -73,13 +53,11 @@ async def store_lesson(lesson: Lesson):
         model="text-embedding-ada-002"
     ).data[0].embedding
 
-    # Duplicate the embedding to match 3072 dimensions
+    # ✅ Ensure embedding matches 3072 dimensions
     extended_embedding = embedding + embedding
 
     # Store in Pinecone
     index.upsert([(lesson.title, extended_embedding, {"content": lesson.content})])
-
-    index.upsert([(lesson.title, embedding, {"content": lesson.content})])
 
     return {"message": f"Lesson '{lesson.title}' stored successfully."}
 
@@ -87,7 +65,7 @@ async def store_lesson(lesson: Lesson):
 @app.get("/retrieve_lesson/")
 def retrieve_lesson(query: str):
     query_embedding = openai.Embedding.create(
-        input=query, model="text-embedding-3-large"  # ✅ Consistent embedding model
+        input=query, model="text-embedding-3-large"
     )['data'][0]['embedding']
     
     results = index.query(query_embedding, top_k=3, include_metadata=True)
@@ -96,12 +74,13 @@ def retrieve_lesson(query: str):
     
     return {"lessons": [{"title": match['id'], "content": match['metadata']['content']} for match in results['matches']]}
 
-# ✅ Retrieve All Lessons (For Lesson Tracking)
+# ✅ Retrieve All Lessons
 @app.get("/all_lessons/")
 def all_lessons():
     lessons = []
-    for vector in index.query(queries=[[0] * PINECONE_DIMENSION], top_k=100, include_metadata=True)['matches']:
+    for vector in index.query(queries=[[0] * 3072], top_k=100, include_metadata=True)['matches']:
         lessons.append({"title": vector["id"], "content": vector["metadata"]["content"]})
     return {"lessons": lessons}
 
 # ✅ ✅ ✅ FastAPI app now correctly initialized ✅ ✅ ✅
+
