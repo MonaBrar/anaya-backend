@@ -1,8 +1,9 @@
 import os
 import openai
-from pinecone import Pinecone, ServerlessSpec  # ✅ Correct Pinecone import
+import pinecone  # <-- THIS FIXES YOUR ERROR
+from pinecone import ServerlessSpec
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel  # ✅ Keep this import!
+from pydantic import BaseModel
 
 # ✅ FastAPI app initialization
 app = FastAPI()
