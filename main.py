@@ -1,7 +1,8 @@
+import os
 import openai
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import Pinecone, ServerlessSpec  # ✅ Correct Pinecone import
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel  # ✅ Keep this import!
 
 # ✅ FastAPI app initialization
 app = FastAPI()
@@ -36,15 +37,16 @@ PINECONE_INDEX_NAME = "anaya-memory"
 
 pc = pinecone.Pinecone(api_key=PINECONE_API_KEY)
 
-if PINECONE_INDEX_NAME not in pinecone.list_indexes():
-    pc_index = pinecone.create_index(
+# Initialize Pinecone Index
+if PINECONE_INDEX_NAME not in pc.list_indexes().names():
+    pc.create_index(
         name=PINECONE_INDEX_NAME,
         dimension=3072,
         metric="cosine",
         spec=ServerlessSpec(cloud="aws", region=PINECONE_ENVIRONMENT)
     )
 
-index = pinecone.Index(PINECONE_INDEX_NAME)
+index = pc.Index(PINECONE_INDEX_NAME)
 
 # ✅ Route to store a lesson in Pinecone
 @app.post("/store_lesson/")
