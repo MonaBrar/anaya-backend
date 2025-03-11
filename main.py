@@ -63,24 +63,24 @@ async def store_lesson(lesson: Lesson):
 @app.get("/retrieve_lesson/")
 async def retrieve_lesson(query: str):
     response = openai_client.embeddings.create(
-        model="text-embedding-ada-002",
-        input=query
+        input=query,
+        model="text-embedding-ada-002"
     )
     query_embedding = response.data[0].embedding
 
-    # Ensure embedding is correctly formatted
-    extended_embedding = query_embedding + query_embedding  # Match Pinecone's 3072 dimensions
+    # ✅ Ensure it's formatted as a list of lists
+    query_embedding = [query_embedding]  
 
     results = index.query(
-        queries=[extended_embedding],  # ✅ Fixed: Wrap inside a list
+        queries=query_embedding,  # ✅ Fix here!
         top_k=3,
         include_metadata=True
     )
 
-    if not results["matches"]:
+    if not results.matches:
         raise HTTPException(status_code=404, detail="No relevant lessons found.")
 
-    lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results["matches"]]
+    lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results.matches]
 
     return {"lessons": lessons}
 
