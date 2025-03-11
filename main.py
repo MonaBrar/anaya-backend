@@ -21,7 +21,7 @@ PINECONE_INDEX_NAME = "anaya444s"
 if not OPENAI_API_KEY or not PINECONE_API_KEY or not PINECONE_ENVIRONMENT:
     raise ValueError("Missing API keys! Please set environment variables.")
 
-# OpenAI Initialization (new syntax)
+# OpenAI Initialization
 openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 # Initialize Pinecone
@@ -47,13 +47,15 @@ class Lesson(BaseModel):
 # Store a Lesson in Pinecone
 @app.post("/store_lesson/")
 async def store_lesson(lesson: Lesson):
-    response = openai.embeddings.create(
-        input=lesson.content,
-        model="text-embedding-ada-002"
+    response = openai_client.embeddings.create(
+        model="text-embedding-ada-002",
+        input=lesson.content
     )
     embedding = response.data[0].embedding
 
-    index.upsert([(lesson.title, embedding, {"content": lesson.content})])
+    index.upsert([
+        (lesson.title, embedding, {"content": lesson.content})
+    ])
 
     return {"message": f"Lesson '{lesson.title}' stored successfully."}
 
@@ -61,24 +63,24 @@ async def store_lesson(lesson: Lesson):
 @app.get("/retrieve_lesson/")
 async def retrieve_lesson(query: str):
     response = openai_client.embeddings.create(
-        input=query,
-        model="text-embedding-ada-002"
+        model="text-embedding-ada-002",
+        input=query
     )
     query_embedding = response.data[0].embedding
 
-    # ✅ Double the embedding vector to match Pinecone's 3072 dimension
-    extended_embedding = query_embedding + query_embedding
+    # Ensure embedding is correctly formatted
+    extended_embedding = query_embedding + query_embedding  # Match Pinecone's 3072 dimensions
 
     results = index.query(
-        vector=extended_embedding,  # <-- fixed here!
+        queries=[extended_embedding],  # ✅ Fixed: Wrap inside a list
         top_k=3,
         include_metadata=True
     )
 
-    if not results['matches']:
+    if not results["matches"]:
         raise HTTPException(status_code=404, detail="No relevant lessons found.")
 
-    lessons = [{"title": match["id"], "content": match['metadata']['content']} for match in results['matches']]
+    lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results["matches"]]
 
     return {"lessons": lessons}
 
@@ -86,14 +88,14 @@ async def retrieve_lesson(query: str):
 @app.get("/all_lessons/")
 async def all_lessons():
     results = index.query(
-        vector=[0.0]*1536,
+        queries=[[0.0]*1536],  # ✅ Fixed: Correctly formatted query
         top_k=100,
         include_metadata=True
     )
 
     lessons = [
-        {"title": match.id, "content": match.metadata["content"]}
-        for match in results.matches
+        {"title": match["id"], "content": match["metadata"]["content"]}
+        for match in results["matches"]
     ]
 
     return {"lessons": lessons}
