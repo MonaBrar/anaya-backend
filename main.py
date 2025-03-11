@@ -80,7 +80,12 @@ def retrieve_lesson(query: str):
 @app.get("/all_lessons/")
 def all_lessons():
     lessons = []
-    vectors = index.query(queries=[[0] * 1536], top_k=100, include_metadata=True)['matches']
+ # Use a random vector instead of zeroes (for testing)
+import numpy as np
+
+dummy_vector = np.random.rand(1536).tolist()  # Generate a valid random query vector
+
+vectors = index.query(queries=[dummy_vector], top_k=100, include_metadata=True)['matches']
     
     for vector in vectors:
         lessons.append({"title": vector["id"], "content": vector["metadata"]["content"]})
