@@ -3,6 +3,7 @@ import openai
 from pinecone import Pinecone, ServerlessSpec
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+import numpy as np  # ✅ Ensure this is imported at the top
 
 # FastAPI app initialization
 app = FastAPI()
@@ -87,15 +88,18 @@ async def retrieve_lesson(query: str):
 # Retrieve All Lessons from Pinecone
 @app.get("/all_lessons/")
 async def all_lessons():
+    # ✅ Generate a random vector (Pinecone rejects zero vectors)
+    dummy_vector = np.random.rand(1536).tolist()
+
     results = index.query(
-        queries=[[0.0]*1536],  # ✅ Fixed: Correctly formatted query
+        queries=[dummy_vector],  # ✅ Fix here!
         top_k=100,
         include_metadata=True
     )
 
     lessons = [
-        {"title": match["id"], "content": match["metadata"]["content"]}
-        for match in results["matches"]
+        {"title": match.id, "content": match.metadata["content"]}
+        for match in results.matches
     ]
 
     return {"lessons": lessons}
