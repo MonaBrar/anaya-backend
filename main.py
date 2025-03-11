@@ -80,13 +80,13 @@ def retrieve_lesson(query: str):
 @app.get("/all_lessons/")
 def all_lessons():
     lessons = []
- # Use a random vector instead of zeroes (for testing)
-import numpy as np
+    import numpy as np  # ✅ Ensure this is inside function, not floating outside
 
-dummy_vector = np.random.rand(1536).tolist()  # Generate a valid random query vector
+    dummy_vector = np.random.rand(1536).tolist()  # ✅ Generate a valid random query vector
 
-vectors = index.query(queries=[dummy_vector], top_k=100, include_metadata=True)['matches']
-    
+    vectors = index.query(queries=[dummy_vector], top_k=100, include_metadata=True)['matches']
+
+    # ✅ Ensure proper indentation
     for vector in vectors:
         lessons.append({"title": vector["id"], "content": vector["metadata"]["content"]})
 
