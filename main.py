@@ -67,21 +67,19 @@ async def retrieve_lesson(query: str):
         input=query,
         model="text-embedding-ada-002"
     )
-    query_embedding = response.data[0].embedding
-
-    # ✅ Ensure it's formatted as a list of lists
-    query_embedding = [query_embedding]  
+    
+    query_embedding = list(map(float, response.data[0].embedding))  # ✅ Ensure it's a list of floats
 
     results = index.query(
-        queries=query_embedding,  # ✅ Fix here!
+        vector=query_embedding,  # ✅ Fix here!
         top_k=3,
         include_metadata=True
     )
 
-    if not results["matches"]:  # ✅ Fix here!
+    if not results.matches:
         raise HTTPException(status_code=404, detail="No relevant lessons found.")
 
-    lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results["matches"]]
+    lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results.matches]
 
     return {"lessons": lessons}
 
