@@ -78,7 +78,7 @@ async def retrieve_lesson(query: str):
         include_metadata=True
     )
 
-    if not results.matches:
+    if not results["matches"]:
         raise HTTPException(status_code=404, detail="No relevant lessons found.")
 
     lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results.matches]
@@ -98,7 +98,7 @@ async def all_lessons():
     )
 
     lessons = [
-        {"title": match.id, "content": match.metadata["content"]}
+        {"title": match["id"], "content": match["metadata"]["content"]}
         for match in results.matches
     ]
 
