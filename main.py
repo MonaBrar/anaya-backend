@@ -16,7 +16,7 @@ def read_root():
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT")
-PINECONE_INDEX_NAME = "anaya-memory"
+PINECONE_INDEX_NAME = "anaya444s"
 
 if not OPENAI_API_KEY or not PINECONE_API_KEY or not PINECONE_ENVIRONMENT:
     raise ValueError("Missing API keys! Please set environment variables.")
