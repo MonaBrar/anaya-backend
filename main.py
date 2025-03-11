@@ -60,21 +60,25 @@ async def store_lesson(lesson: Lesson):
 # Retrieve a Lesson from Pinecone
 @app.get("/retrieve_lesson/")
 async def retrieve_lesson(query: str):
-    response = openai.embeddings.create(
+    response = openai_client.embeddings.create(
         input=query,
         model="text-embedding-ada-002"
     )
     query_embedding = response.data[0].embedding
 
-    results = index.query(vector=query_embedding, top_k=3, include_metadata=True)
+    # ✅ Double the embedding vector to match Pinecone's 3072 dimension
+    extended_embedding = query_embedding + query_embedding
 
-    if not results.matches:
+    results = index.query(
+        vector=extended_embedding,  # <-- fixed here!
+        top_k=3,
+        include_metadata=True
+    )
+
+    if not results['matches']:
         raise HTTPException(status_code=404, detail="No relevant lessons found.")
 
-    lessons = [
-        {"title": match.id, "content": match.metadata["content"]}
-        for match in results.matches
-    ]
+    lessons = [{"title": match["id"], "content": match['metadata']['content']} for match in results['matches']]
 
     return {"lessons": lessons}
 
