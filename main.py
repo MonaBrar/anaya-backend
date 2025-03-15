@@ -82,10 +82,6 @@ async def retrieve_lesson(query: str):
         model="text-embedding-ada-002"
     )
     
-    @app.get("/routes")
-async def get_routes():
-    return {"routes": [route.path for route in app.routes]}
-    
     query_embedding = list(map(float, response.data[0].embedding))  # ✅ Ensure it's a list of floats
 
     results = index.query(
@@ -157,3 +153,7 @@ async def store_lesson_neo4j(lesson: Lesson):
         return {"message": f"Lesson '{lesson.title}' stored in Neo4j successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Neo4j Error: {str(e)}")
+
+@app.get("/routes")
+async def get_routes():
+    return {"routes": [route.path for route in app.routes]}
