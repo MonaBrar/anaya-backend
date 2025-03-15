@@ -34,7 +34,7 @@ existing_indexes = [index.name for index in pc.list_indexes()]
 if PINECONE_INDEX_NAME not in existing_indexes:
     pc.create_index(
         name=PINECONE_INDEX_NAME,
-        dimension=1536,
+        dimension=1536,  # Correct dimension for text-embedding-ada-002
         metric="cosine",
         spec=ServerlessSpec(cloud="aws", region=PINECONE_ENVIRONMENT)
     )
@@ -82,25 +82,39 @@ async def store_lesson(lesson: Lesson):
 @app.get("/retrieve_lesson/")
 async def retrieve_lesson(query: str):
     try:
+        print(f"🔍 Incoming Query: {query}")
+
+        # ✅ Trim whitespace and remove newline characters
+        cleaned_query = query.strip()
+        if not cleaned_query:
+            raise HTTPException(status_code=400, detail="Query cannot be empty.")
+
         response = openai_client.embeddings.create(
-            input=query,
+            input=cleaned_query,  # ✅ Use cleaned query
             model="text-embedding-ada-002"
         )
-        query_embedding = list(map(float, response.data[0].embedding))
+
+        query_embedding = np.array(response.data[0].embedding, dtype=np.float32).tolist()  # ✅ Force correct float format
+
+        print(f"✅ Query Embedding Generated Successfully")
 
         results = index.query(
-            queries=[query_embedding],
+            vector=query_embedding,  # ✅ Corrected Query Syntax!
             top_k=3,
             include_metadata=True
         )
+
+        print(f"📡 Pinecone Query Results: {results}")
 
         if not results.matches:
             raise HTTPException(status_code=404, detail="No relevant lessons found.")
 
         lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results.matches]
+
         return {"lessons": lessons}
 
     except Exception as e:
+        print(f"🚨 Retrieval Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Pinecone Retrieval Error: {str(e)}")
 
 # Retrieve All Lessons from Pinecone
@@ -108,7 +122,7 @@ async def retrieve_lesson(query: str):
 async def all_lessons():
     dummy_vector = np.random.rand(1536).tolist()
     results = index.query(
-        queries=[dummy_vector],
+        queries=[dummy_vector],  # ✅ Fixed query syntax
         top_k=100,
         include_metadata=True
     )
