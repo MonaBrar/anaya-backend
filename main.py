@@ -174,3 +174,8 @@ async def store_lesson_neo4j(lesson: Lesson):
 @app.get("/routes")
 async def get_routes():
     return {"routes": [route.path for route in app.routes]}
+
+@app.get("/debug_routes")
+async def debug_routes():
+    return {"available_routes": [route.path for route in app.routes]}
+
