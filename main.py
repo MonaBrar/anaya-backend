@@ -126,3 +126,18 @@ def test_connection():
 
 # Run connection test
 test_connection()
+
+@app.post("/store_lesson_neo4j/")
+async def store_lesson_neo4j(lesson: Lesson):
+    query = """
+    MERGE (l:Lesson {title: $title})
+    SET l.content = $content
+    RETURN l
+    """
+    try:
+        with driver.session() as session:
+            session.run(query, title=lesson.title, content=lesson.content)
+        return {"message": f"Lesson '{lesson.title}' stored in Neo4j successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Neo4j Error: {str(e)}")
+
