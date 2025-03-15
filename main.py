@@ -103,14 +103,15 @@ async def analyze_lesson(title: str):
 
         # Use OpenAI to analyze potential relationships
         prompt = f"Given this lesson: '{lesson['content']}', what related concepts or lessons should follow it? Explain why."
-        response = openai_client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "system", "content": prompt}]
-        )
+        response = openai_client.completions.create(
+    model="gpt-4",
+    messages=[{"role": "system", "content": prompt}]
+)
 
-        print(f"✅ OpenAI Response Received")
+# Correct way to extract the content
+ai_response = response.choices[0].message.content
 
-        return {"related_suggestions": response.choices[0].message["content"]}
+return {"related_suggestions": ai_response}
 
     except Exception as e:
         print(f"🚨 Error Occurred: {str(e)}")
