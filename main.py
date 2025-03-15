@@ -79,35 +79,42 @@ async def store_lesson(lesson: Lesson):
     return {"message": f"Lesson '{lesson.title}' stored successfully in Pinecone and Neo4j."}
 
 # Retrieve a Lesson from Pinecone
-@app.get("/retrieve_lesson/")
-async def retrieve_lesson(query: str):
+@app.get("/analyze_lesson/")
+async def analyze_lesson(title: str):
+    """
+    Retrieves a lesson and asks Anaya what she thinks is related.
+    """
     try:
-        print(f"🔍 Incoming Query: {query}")
+        print(f"🔍 Looking for lesson: {title}")
 
-        # ✅ Trim whitespace and remove newline characters
-        cleaned_query = query.strip()
-        if not cleaned_query:
-            raise HTTPException(status_code=400, detail="Query cannot be empty.")
+        query = """
+        MATCH (l:Lesson {title: $title})
+        RETURN l.content AS content
+        """
+        with driver.session() as session:
+            result = session.run(query, title=title)
+            lesson = result.single()
 
-        response = openai_client.embeddings.create(
-            input=cleaned_query,  # ✅ Use cleaned query
-            model="text-embedding-ada-002"
+        if not lesson:
+            print("🚨 Lesson not found in Neo4j!")
+            raise HTTPException(status_code=404, detail="Lesson not found.")
+
+        print(f"✅ Lesson Found: {lesson['content']}")
+
+        # Use OpenAI to analyze potential relationships
+        prompt = f"Given this lesson: '{lesson['content']}', what related concepts or lessons should follow it? Explain why."
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": prompt}]
         )
 
-        query_embedding = np.array(response.data[0].embedding, dtype=np.float32).tolist()  # ✅ Force correct float format
+        print(f"✅ OpenAI Response Received")
 
-        print(f"✅ Query Embedding Generated Successfully")
+        return {"related_suggestions": response.choices[0].message["content"]}
 
-        results = index.query(
-            vector=query_embedding,  # ✅ Corrected Query Syntax!
-            top_k=3,
-            include_metadata=True
-        )
-
-        print(f"📡 Pinecone Query Results: {results}")
-
-        if not results.matches:
-            raise HTTPException(status_code=404, detail="No relevant lessons found.")
+    except Exception as e:
+        print(f"🚨 Error Occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis Error: {str(e)}")
 
         lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results.matches]
 
