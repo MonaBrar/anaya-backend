@@ -81,6 +81,7 @@ async def retrieve_lesson(query: str):
         input=query,
         model="text-embedding-ada-002"
     )
+    
     @app.get("/routes")
 async def get_routes():
     return {"routes": [route.path for route in app.routes]}
