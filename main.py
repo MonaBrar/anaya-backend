@@ -81,6 +81,9 @@ async def retrieve_lesson(query: str):
         input=query,
         model="text-embedding-ada-002"
     )
+    @app.get("/routes")
+async def get_routes():
+    return {"routes": [route.path for route in app.routes]}
     
     query_embedding = list(map(float, response.data[0].embedding))  # ✅ Ensure it's a list of floats
 
