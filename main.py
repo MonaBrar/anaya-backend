@@ -3,7 +3,7 @@ import openai
 from pinecone import Pinecone, ServerlessSpec
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import numpy as np  # ✅ Ensure this is imported at the top
+import numpy as np
 from neo4j import GraphDatabase
 
 # FastAPI app initialization
@@ -46,19 +46,23 @@ class Lesson(BaseModel):
     title: str
     content: str
 
-# Store a Lesson in Pinecone
+# Store a Lesson in Pinecone & Neo4j
 @app.post("/store_lesson/")
 async def store_lesson(lesson: Lesson):
-    # Store in Pinecone
-    response = openai_client.embeddings.create(
-        model="text-embedding-ada-002",
-        input=lesson.content
-    )
-    embedding = response.data[0].embedding
+    try:
+        # Generate embedding
+        response = openai_client.embeddings.create(
+            model="text-embedding-ada-002",
+            input=lesson.content
+        )
+        embedding = response.data[0].embedding
 
-    index.upsert([
-        (lesson.title, embedding, {"content": lesson.content})
-    ])
+        # Store in Pinecone
+        index.upsert([
+            (lesson.title, embedding, {"content": lesson.content})
+        ])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OpenAI/Pinecone Error: {str(e)}")
 
     # Store in Neo4j
     query = """
@@ -77,40 +81,40 @@ async def store_lesson(lesson: Lesson):
 # Retrieve a Lesson from Pinecone
 @app.get("/retrieve_lesson/")
 async def retrieve_lesson(query: str):
-    response = openai_client.embeddings.create(
-        input=query,
-        model="text-embedding-ada-002"
-    )
-    
-    query_embedding = list(map(float, response.data[0].embedding))  # ✅ Ensure it's a list of floats
+    try:
+        response = openai_client.embeddings.create(
+            input=query,
+            model="text-embedding-ada-002"
+        )
+        query_embedding = list(map(float, response.data[0].embedding))
 
-    results = index.query(
-        vector=query_embedding,  # ✅ Fix here!
-        top_k=3,
-        include_metadata=True
-    )
+        results = index.query(
+            queries=[query_embedding],  # ✅ Fixed query syntax
+            top_k=3,
+            include_metadata=True
+        )
 
-    if not results.matches:
-        raise HTTPException(status_code=404, detail="No relevant lessons found.")
+        if not results.matches:
+            raise HTTPException(status_code=404, detail="No relevant lessons found.")
 
-    lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results.matches]
+        lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results.matches]
+        return {"lessons": lessons}
 
-    return {"lessons": lessons}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Pinecone Retrieval Error: {str(e)}")
 
 # Retrieve All Lessons from Pinecone
 @app.get("/all_lessons/")
 async def all_lessons():
-    # ✅ Generate a random vector (Pinecone rejects zero vectors)
     dummy_vector = np.random.rand(1536).tolist()
-
     results = index.query(
-        queries=[dummy_vector],  # ✅ Fix here!
+        queries=[dummy_vector],  # ✅ Fixed query syntax
         top_k=100,
         include_metadata=True
     )
 
     lessons = [
-        {"title": match["id"], "content": match["metadata"]["content"]}  # ✅ Fix here!
+        {"title": match["id"], "content": match["metadata"]["content"]}
         for match in results["matches"]
     ]
 
@@ -121,11 +125,11 @@ async def all_lessons():
 def test_api():
     return {"message": "API is running smoothly!"}
 
-NEO4J_URI = "neo4j+s://eda4629b.databases.neo4j.io"  # Your Bolt URL
-NEO4J_USER = "neo4j"  # Default username
-NEO4J_PASSWORD = "hcNZkmmtT6xIdGw-PZ5yRyXCTCS6dX6ezNjFexfEr4k"  # Your Neo4j password
+# Neo4j Connection
+NEO4J_URI = "neo4j+s://eda4629b.databases.neo4j.io"
+NEO4J_USER = "neo4j"
+NEO4J_PASSWORD = "hcNZkmmtT6xIdGw-PZ5yRyXCTCS6dX6ezNjFexfEr4k"
 
-# Create a connection to Neo4j
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
 
 def test_connection():
@@ -140,6 +144,7 @@ def test_connection():
 # Run connection test
 test_connection()
 
+# Store Lesson in Neo4j Only
 @app.post("/store_lesson_neo4j/")
 async def store_lesson_neo4j(lesson: Lesson):
     query = """
@@ -154,6 +159,7 @@ async def store_lesson_neo4j(lesson: Lesson):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Neo4j Error: {str(e)}")
 
+# Debug Route to List Available Endpoints
 @app.get("/routes")
 async def get_routes():
     return {"routes": [route.path for route in app.routes]}
