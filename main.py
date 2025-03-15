@@ -173,6 +173,46 @@ async def store_lesson_neo4j(lesson: Lesson):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Neo4j Error: {str(e)}")
 
+@app.get("/analyze_lesson/")
+async def analyze_lesson(title: str):
+    """
+    Retrieves a lesson and asks Anaya what she thinks is related.
+    """
+    try:
+        query = """
+        MATCH (l:Lesson {title: $title})
+        RETURN l.content AS content
+        """
+        with driver.session() as session:
+            result = session.run(query, title=title)
+            lesson = result.single()
+            if not lesson:
+                raise HTTPException(status_code=404, detail="Lesson not found.")
+
+        # Use OpenAI to analyze potential relationships
+        prompt = f"Given this lesson: '{lesson['content']}', what related concepts or lessons should follow it? Explain why."
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": prompt}]
+        )
+
+        return {"related_suggestions": response.choices[0].message["content"]}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analysis Error: {str(e)}")
+
+        # Use OpenAI to analyze potential relationships
+        prompt = f"Given this lesson: '{lesson['content']}', what related concepts or lessons should follow it? Explain why."
+        response = openai_client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "system", "content": prompt}]
+)
+
+        return {"related_suggestions": response.choices[0].message["content"]}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analysis Error: {str(e)}")
+
 # Debug Route to List Available Endpoints
 @app.get("/routes")
 async def get_routes():
