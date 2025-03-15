@@ -111,6 +111,7 @@ async def analyze_lesson(title: str):
 # Correct way to extract the content
 ai_response = response.choices[0].message.content
 
+ai_response = response.choices[0].message.content
 return {"related_suggestions": ai_response}
 
     except Exception as e:
