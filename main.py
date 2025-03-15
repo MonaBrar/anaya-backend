@@ -4,7 +4,28 @@ from pinecone import Pinecone, ServerlessSpec
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import numpy as np
-from neo4j import GraphDatabase
+from neo4j import GraphDatabase, basic_auth
+
+# Neo4j Credentials
+NEO4J_URI = "neo4j+s://eda4629b.databases.neo4j.io"
+NEO4J_USER = "neo4j"
+NEO4J_PASSWORD = "hcNZkmmtT6xIdGw-PZ5yRyXCTCS6dX6ezNjFexfEr4k"
+
+# Create a Neo4j Driver instance
+driver = GraphDatabase.driver(NEO4J_URI, auth=basic_auth(NEO4J_USER, NEO4J_PASSWORD))
+
+# Function to Test Neo4j Connection
+def test_connection():
+    try:
+        with driver.session() as session:
+            result = session.run("RETURN 'Neo4j connection successful' AS message")
+            for record in result:
+                print(record["message"])
+    except Exception as e:
+        print(f"🚨 Neo4j Connection Error: {e}")
+
+# Test connection when the API starts
+test_connection()
 
 # FastAPI app initialization
 app = FastAPI()
