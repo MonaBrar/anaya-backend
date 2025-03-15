@@ -3,3 +3,4 @@ uvicorn
 openai
 pinecone
 numpy
+neo4j
