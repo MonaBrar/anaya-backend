@@ -49,6 +49,7 @@ class Lesson(BaseModel):
 # Store a Lesson in Pinecone
 @app.post("/store_lesson/")
 async def store_lesson(lesson: Lesson):
+    # Store in Pinecone
     response = openai_client.embeddings.create(
         model="text-embedding-ada-002",
         input=lesson.content
@@ -59,7 +60,19 @@ async def store_lesson(lesson: Lesson):
         (lesson.title, embedding, {"content": lesson.content})
     ])
 
-    return {"message": f"Lesson '{lesson.title}' stored successfully."}
+    # Store in Neo4j
+    query = """
+    MERGE (l:Lesson {title: $title})
+    SET l.content = $content
+    RETURN l
+    """
+    try:
+        with driver.session() as session:
+            session.run(query, title=lesson.title, content=lesson.content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Neo4j Error: {str(e)}")
+
+    return {"message": f"Lesson '{lesson.title}' stored successfully in Pinecone and Neo4j."}
 
 # Retrieve a Lesson from Pinecone
 @app.get("/retrieve_lesson/")
@@ -140,4 +153,3 @@ async def store_lesson_neo4j(lesson: Lesson):
         return {"message": f"Lesson '{lesson.title}' stored in Neo4j successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Neo4j Error: {str(e)}")
-
