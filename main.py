@@ -34,7 +34,7 @@ existing_indexes = [index.name for index in pc.list_indexes()]
 if PINECONE_INDEX_NAME not in existing_indexes:
     pc.create_index(
         name=PINECONE_INDEX_NAME,
-        dimension=1536,  # Correct dimension for text-embedding-ada-002
+        dimension=1536,
         metric="cosine",
         spec=ServerlessSpec(cloud="aws", region=PINECONE_ENVIRONMENT)
     )
@@ -79,64 +79,46 @@ async def store_lesson(lesson: Lesson):
     return {"message": f"Lesson '{lesson.title}' stored successfully in Pinecone and Neo4j."}
 
 # Retrieve a Lesson from Pinecone
-@app.get("/analyze_lesson/")
-async def analyze_lesson(title: str):
-    """
-    Retrieves a lesson and asks Anaya what she thinks is related.
-    """
+@app.get("/retrieve_lesson/")
+async def retrieve_lesson(query: str):
     try:
-        print(f"🔍 Looking for lesson: {title}")
+        response = openai_client.embeddings.create(
+            input=query,
+            model="text-embedding-ada-002"
+        )
+        query_embedding = list(map(float, response.data[0].embedding))
 
-        query = """
-        MATCH (l:Lesson {title: $title})
-        RETURN l.content AS content
-        """
-        with driver.session() as session:
-            result = session.run(query, title=title)
-            lesson = result.single()
-
-        if not lesson:
-            print("🚨 Lesson not found in Neo4j!")
-            raise HTTPException(status_code=404, detail="Lesson not found.")
-
-        print(f"✅ Lesson Found: {lesson['content']}")
-
-        # Use OpenAI to analyze potential relationships
-        prompt = f"Given this lesson: '{lesson['content']}', what related concepts or lessons should follow it? Explain why."
-        response = openai_client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "system", "content": prompt}]
+        results = index.query(
+            queries=[query_embedding],
+            top_k=3,
+            include_metadata=True
         )
 
-        # ✅ Extract the correct response
-        ai_response = response.choices[0].message.content
+        if not results.matches:
+            raise HTTPException(status_code=404, detail="No relevant lessons found.")
 
-        return {"related_suggestions": ai_response}
+        lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results.matches]
+        return {"lessons": lessons}
 
     except Exception as e:
-        print(f"🚨 Error Occurred: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Analysis Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Pinecone Retrieval Error: {str(e)}")
 
 # Retrieve All Lessons from Pinecone
 @app.get("/all_lessons/")
 async def all_lessons():
-    try:
-        dummy_vector = np.random.rand(1536).tolist()
-        results = index.query(
-            vector=dummy_vector,  # ✅ Fixed query syntax
-            top_k=100,
-            include_metadata=True
-        )
+    dummy_vector = np.random.rand(1536).tolist()
+    results = index.query(
+        queries=[dummy_vector],
+        top_k=100,
+        include_metadata=True
+    )
 
-        lessons = [
-            {"title": match["id"], "content": match["metadata"]["content"]}
-            for match in results["matches"]
-        ]
+    lessons = [
+        {"title": match["id"], "content": match["metadata"]["content"]}
+        for match in results["matches"]
+    ]
 
-        return {"lessons": lessons}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error retrieving lessons: {str(e)}")
+    return {"lessons": lessons}
 
 # Test Endpoint
 @app.get("/test")
