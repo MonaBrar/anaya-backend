@@ -4,6 +4,7 @@ from pinecone import Pinecone, ServerlessSpec
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import numpy as np  # ✅ Ensure this is imported at the top
+from neo4j import GraphDatabase
 
 # FastAPI app initialization
 app = FastAPI()
@@ -106,3 +107,22 @@ async def all_lessons():
 @app.get("/test")
 def test_api():
     return {"message": "API is running smoothly!"}
+
+NEO4J_URI = "neo4j+s://eda4629b.databases.neo4j.io"  # Your Bolt URL
+NEO4J_USER = "neo4j"  # Default username
+NEO4J_PASSWORD = "hcNZkmmtT6xIdGw-PZ5yRyXCTCS6dX6ezNjFexfEr4k"  # Your Neo4j password
+
+# Create a connection to Neo4j
+driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+
+def test_connection():
+    try:
+        with driver.session() as session:
+            result = session.run("RETURN 'Neo4j connection successful' AS message")
+            for record in result:
+                print(record["message"])
+    except Exception as e:
+        print(f"Error connecting to Neo4j: {e}")
+
+# Run connection test
+test_connection()
