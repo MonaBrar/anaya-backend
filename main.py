@@ -10,7 +10,8 @@ from neo4j import GraphDatabase
 app = FastAPI()
 
 # Root Route to confirm API is live
-@app.get("/")
+@app.get("/", include_in_schema=False)
+@app.head("/")
 def read_root():
     return {"message": "Welcome to Anaya's FastAPI backend!"}
 
