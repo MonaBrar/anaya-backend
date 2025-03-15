@@ -103,45 +103,40 @@ async def analyze_lesson(title: str):
 
         # Use OpenAI to analyze potential relationships
         prompt = f"Given this lesson: '{lesson['content']}', what related concepts or lessons should follow it? Explain why."
-        response = openai_client.completions.create(
-    model="gpt-4",
-    messages=[{"role": "system", "content": prompt}]
-)
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "system", "content": prompt}]
+        )
 
-# Correct way to extract the content
-ai_response = response.choices[0].message.content
+        # ✅ Extract the correct response
+        ai_response = response.choices[0].message.content
 
-ai_response = response.choices[0].message.content
-return {"related_suggestions": ai_response}
+        return {"related_suggestions": ai_response}
 
     except Exception as e:
         print(f"🚨 Error Occurred: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Analysis Error: {str(e)}")
 
-        lessons = [{"title": match["id"], "content": match["metadata"]["content"]} for match in results.matches]
+# Retrieve All Lessons from Pinecone
+@app.get("/all_lessons/")
+async def all_lessons():
+    try:
+        dummy_vector = np.random.rand(1536).tolist()
+        results = index.query(
+            vector=dummy_vector,  # ✅ Fixed query syntax
+            top_k=100,
+            include_metadata=True
+        )
+
+        lessons = [
+            {"title": match["id"], "content": match["metadata"]["content"]}
+            for match in results["matches"]
+        ]
 
         return {"lessons": lessons}
 
     except Exception as e:
-        print(f"🚨 Retrieval Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Pinecone Retrieval Error: {str(e)}")
-
-# Retrieve All Lessons from Pinecone
-@app.get("/all_lessons/")
-async def all_lessons():
-    dummy_vector = np.random.rand(1536).tolist()
-    results = index.query(
-        queries=[dummy_vector],  # ✅ Fixed query syntax
-        top_k=100,
-        include_metadata=True
-    )
-
-    lessons = [
-        {"title": match["id"], "content": match["metadata"]["content"]}
-        for match in results["matches"]
-    ]
-
-    return {"lessons": lessons}
+        raise HTTPException(status_code=500, detail=f"Error retrieving lessons: {str(e)}")
 
 # Test Endpoint
 @app.get("/test")
@@ -181,46 +176,6 @@ async def store_lesson_neo4j(lesson: Lesson):
         return {"message": f"Lesson '{lesson.title}' stored in Neo4j successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Neo4j Error: {str(e)}")
-
-@app.get("/analyze_lesson/")
-async def analyze_lesson(title: str):
-    """
-    Retrieves a lesson and asks Anaya what she thinks is related.
-    """
-    try:
-        query = """
-        MATCH (l:Lesson {title: $title})
-        RETURN l.content AS content
-        """
-        with driver.session() as session:
-            result = session.run(query, title=title)
-            lesson = result.single()
-            if not lesson:
-                raise HTTPException(status_code=404, detail="Lesson not found.")
-
-        # Use OpenAI to analyze potential relationships
-        prompt = f"Given this lesson: '{lesson['content']}', what related concepts or lessons should follow it? Explain why."
-        response = openai_client.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "system", "content": prompt}]
-        )
-
-        return {"related_suggestions": response.choices[0].message["content"]}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analysis Error: {str(e)}")
-
-        # Use OpenAI to analyze potential relationships
-        prompt = f"Given this lesson: '{lesson['content']}', what related concepts or lessons should follow it? Explain why."
-        response = openai_client.chat.completions.create(
-    model="gpt-4",
-    messages=[{"role": "system", "content": prompt}]
-)
-
-        return {"related_suggestions": response.choices[0].message["content"]}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Analysis Error: {str(e)}")
 
 # Debug Route to List Available Endpoints
 @app.get("/routes")
